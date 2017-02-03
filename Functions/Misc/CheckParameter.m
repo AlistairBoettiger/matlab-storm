@@ -141,6 +141,10 @@ for i=1:length(type)
             if ~strcmp(class(value), 'parallel.Pool')
                 error([name ' is not a parallel.Pool object']);
             end
+        case 'fasta'
+            if ~isstruct(value)
+                error([name 'is not a valid fasta file. Maybe you need to load it still with readfasta'])
+            end
         case 'freeType'
         otherwise
             error([type{i} ' is not a valid type']);

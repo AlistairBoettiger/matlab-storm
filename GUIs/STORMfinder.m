@@ -246,8 +246,8 @@ try
         SF{handles.gui_number}.mlist.z(:),'k.','MarkerSize',10);
     grid on;
     xlabel('y'); ylabel('x'); zlabel('z'); 
-    xlim([0,SF{handles.gui_number}.impars.w]);
-    ylim([0,SF{handles.gui_number}.impars.h]);
+    xlim(SF{handles.gui_number}.impars.xlims); 
+    ylim(SF{handles.gui_number}.impars.ylims);
 catch er
     disp(er.message);
     disp('no molecules found to plot!');
@@ -318,6 +318,8 @@ global SF
     iminfo = ReadInfoFile(SF{handles.gui_number}.daxfile);
     SF{handles.gui_number}.impars.h = iminfo.frame_dimensions(2);
     SF{handles.gui_number}.impars.w = iminfo.frame_dimensions(1);
+    SF{handles.gui_number}.impars.ylims = [0, SF{handles.gui_number}.impars.h];
+    SF{handles.gui_number}.impars.xlims = [0, SF{handles.gui_number}.impars.w];
     SF{handles.gui_number}.impars.infofile = iminfo; 
 % setup default intensities
 %     fid = fopen(SF{handles.gui_number}.daxfile);
@@ -340,6 +342,12 @@ global SF
     set(handles.FrameSlider,'Value',SF{handles.gui_number}.impars.cframe); 
     set(handles.FrameSlider,'SliderStep',[1/TFrames,50/TFrames]);
     UpdateFrame(hObject, handles);
+    cla;
+    imagesc(Im(:,:,1)'); caxis([SF{handles.gui_number}.impars.cmin,SF{handles.gui_number}.impars.cmax]); colormap gray;
+    axis off; 
+    set(handles.title1,'String',SF{handles.gui_number}.daxfile);
+    set(handles.FrameSlider,'Value',SF{handles.gui_number}.impars.cframe); % update slider
+    axis image;
 
 function UpdateFrame(hObject,handles)
     global SF
@@ -354,13 +362,17 @@ function UpdateFrame(hObject,handles)
 %     fclose(fid);
 %     Im = reshape(Im,w,h,L);
     Im = ReadDax(SF{handles.gui_number}.daxfile,'startFrame',cframe,'endFrame',cframe,'verbose',false)';
-    handles.axes1; cla;
+    handles.axes1; 
+    SF{handles.gui_number}.impars.xlims = get(handles.axes1,'xlim');
+    SF{handles.gui_number}.impars.ylims = get(handles.axes1,'ylim');
+    cla;
     imagesc(Im(:,:,1)'); caxis([SF{handles.gui_number}.impars.cmin,SF{handles.gui_number}.impars.cmax]); colormap gray;
      axis off; 
     set(handles.title1,'String',SF{handles.gui_number}.daxfile);
     set(handles.FrameSlider,'Value',SF{handles.gui_number}.impars.cframe); % update slider
     axis image;
-    
+    xlim(SF{handles.gui_number}.impars.xlims); 
+    ylim(SF{handles.gui_number}.impars.ylims);
     
     % If a binfile has been loaded, plot the localizations in this frame; 
     if ~isempty(SF{handles.gui_number}.fullmlist)
