@@ -118,6 +118,8 @@ function FindDots_ClickedCallback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 global  SF insightExe daoSTORMexe scratchPath
 
+    % only find spots in current field of view
+    UpdateFitPars(handles);
     FitMethod = get(handles.FitMethod,'Value');
    
 %     k = strfind(daxfile,filesep);
@@ -148,6 +150,7 @@ global  SF insightExe daoSTORMexe scratchPath
         fwrite(ftemp,SF{handles.gui_number}.impars.Im(:),'*uint16',0,'b');
         fclose(ftemp);
 
+        
         % write temp inf file 
         InfoFile_temp = SF{handles.gui_number}.impars.infofile;
         InfoFile_temp.number_of_frames = 1;
@@ -363,8 +366,8 @@ function UpdateFrame(hObject,handles)
 %     Im = reshape(Im,w,h,L);
     Im = ReadDax(SF{handles.gui_number}.daxfile,'startFrame',cframe,'endFrame',cframe,'verbose',false)';
     handles.axes1; 
-    SF{handles.gui_number}.impars.xlims = get(handles.axes1,'xlim');
-    SF{handles.gui_number}.impars.ylims = get(handles.axes1,'ylim');
+    SF{handles.gui_number}.impars.xlims = round(get(handles.axes1,'xlim'));
+    SF{handles.gui_number}.impars.ylims = round(get(handles.axes1,'ylim'));
     cla;
     imagesc(Im(:,:,1)'); caxis([SF{handles.gui_number}.impars.cmin,SF{handles.gui_number}.impars.cmax]); colormap gray;
      axis off; 
@@ -397,125 +400,134 @@ function [FitPars,parameters] = ReadParameterFile(FitMethod,handles)
 % depending on whether fit method is insightM or DaoSTORM respectively.  
 % if no inifile or xmlfile has been loaded yet, load default files.  
 % 
-global SF defaultIniFile defaultXmlFile defaultGPUmFile
-  % clear fitPars  
-if FitMethod == 1
-    if isempty(SF{handles.gui_number}.inifile)
-        SF{handles.gui_number}.inifile = defaultIniFile; % '..\Parameters\647zcal_storm2.ini';
-         disp('no inifile found to load, using default file ');
-         disp(SF{handles.gui_number}.inifile); 
-        disp('to load a file, drag and drop it into matlab'); 
-    end
-        parameters = {
-            'min height=',...
-            'max height=',...
-            'default background=',...
-            'min width=',...
-            'max width=',...
-            'default width=',...
-            'axial ratio tolerance=',...
-            'Fit ROI=',...
-            'displacement=',...
-            'start frame='...
-            'allow drift=',...
-            'number of molecules in each correlation time step (XY)=',...
-            'number of molecules in each correlation time step (Z)=',...
-            'minimum time step size (frame)=',...
-            'maximum time step size (frame)=',...
-            'xy grid size (nm) in xy correlation=',...
-            'xy grid size (nm) in z correlation=',...
-            'points for moving average in generating drift correlation (XY)=',...
-            'points for moving average in generating drift correlation (Z)=',...
-            'z method=',...
-            'z calibration expression=',...
-            'z calibration outlier rejection percentile=',...
-            'z calibration start=',...
-            'z calibration end=',...
-            'z calibration step=',...
-            'ROI Valid=',...
-            'ROI_x0=',...
-            'ROI_x1=',...
-            'ROI_y0=',...
-            'ROI_y1=',...
-            };
+    global SF defaultIniFile defaultXmlFile defaultGPUmFile
+      % clear fitPars  
+    if FitMethod == 1
+        if isempty(SF{handles.gui_number}.inifile)
+            SF{handles.gui_number}.inifile = defaultIniFile; % '..\Parameters\647zcal_storm2.ini';
+             disp('no inifile found to load, using default file ');
+             disp(SF{handles.gui_number}.inifile); 
+            disp('to load a file, drag and drop it into matlab'); 
+        end
+            parameters = {
+                'min height=',...
+                'max height=',...
+                'default background=',...
+                'min width=',...
+                'max width=',...
+                'default width=',...
+                'axial ratio tolerance=',...
+                'Fit ROI=',...
+                'displacement=',...
+                'start frame='...
+                'allow drift=',...
+                'number of molecules in each correlation time step (XY)=',...
+                'number of molecules in each correlation time step (Z)=',...
+                'minimum time step size (frame)=',...
+                'maximum time step size (frame)=',...
+                'xy grid size (nm) in xy correlation=',...
+                'xy grid size (nm) in z correlation=',...
+                'points for moving average in generating drift correlation (XY)=',...
+                'points for moving average in generating drift correlation (Z)=',...
+                'z method=',...
+                'z calibration expression=',...
+                'z calibration outlier rejection percentile=',...
+                'z calibration start=',...
+                'z calibration end=',...
+                'z calibration step=',...
+                'ROI Valid=',...
+                'ROI_x0=',...
+                'ROI_x1=',...
+                'ROI_y0=',...
+                'ROI_y1=',...
+                };
+            % Get values from loaded inifile
+                target_values = read_parameterfile(SF{handles.gui_number}.inifile,parameters,'');
+            % save these values into global FitPars;   
+                Pfields = {'minheight','maxheight','bkd','minwidth','maxwidth',...
+                    'initwidth','maxaxratio','fitROI','displacement','startFrame','CorDrift',...
+                    'xymols','zmols','minframes','maxframes','xygridxy','xygridz',...
+                    'movAxy','movAz','Fit3D','zcaltxt','zop','zstart','zend','zstep',...
+                    'useROI','xmin','xmax','ymin','ymax'};
 
-        % Get values from loaded inifile
-            target_values = read_parameterfile(SF{handles.gui_number}.inifile,parameters,'');
-        % save these values into global FitPars;   
-            Pfields = {'minheight','maxheight','bkd','minwidth','maxwidth',...
-                'initwidth','maxaxratio','fitROI','displacement','startFrame','CorDrift',...
-                'xymols','zmols','minframes','maxframes','xygridxy','xygridz',...
-                'movAxy','movAz','Fit3D','zcaltxt','zop','zstart','zend','zstep',...
-                'useROI','xmin','xmax','ymin','ymax'};
-            FitPars = cell2struct(target_values,Pfields,2);
-            parsfile = SF{handles.gui_number}.inifile;
-            
-elseif FitMethod == 2
-    if isempty(SF{handles.gui_number}.xmlfile)
-        SF{handles.gui_number}.xmlfile = defaultXmlFile; %  ;
-        disp('no xmlfile parameter file found to load.')
-        disp(['using default file',SF{handles.gui_number}.xmlfile]);
-        disp('to load a file, drag and drop into matlab'); 
-    end
-    parameters = {
-        '<model type="string">',...    method
-        '<threshold type="float">'...  threshold
-        '<iterations type="int">',...  maxits
-        '<baseline type="float">',...   bkd
-        '<pixel_size type="float">',... ppnm
-        '<sigma type="float">',...      initwidth
-        '<descriptor type="string">',... descriptor
-        '<radius type="float">',...  displacement
-        '<start_frame type="int">',... startFrame
-        '<max_frame type="int">',... endFrame
-        '<drift_correction type="int">',... %  CorDrift
-        '<frame_step type="int">',... dframes
-        '<d_scale type="int">',...dscales
-        '<do_zfit type="int">',... Fit3D
-        '<cutoff type="float">',... zcutoff
-        '<min_z type="float">',...  zstart 
-        '<max_z type="float">',...  zend
-        '<wx_wo type="float">',...  wx0
-        '<wx_c type="float">',...  gx
-        '<wx_d type="float">',...  zrx
-        '<wxA type="float">',...  Ax
-        '<wxB type="float">',... Bx
-        '<wxC type="float">',...  Cx
-        '<wxD type="float">',...  Dx
-        '<wy_wo type="float">',...  wy0
-        '<wy_c type="float">',...  gy
-        '<wy_d type="float">',...  zry
-        '<wyA type="float">',...  Ay
-        '<wyB type="float">',...  By
-        '<wyC type="float">',...  Cy
-        '<wyD type="float">',...  Dy
-        '<x_start type="int">',... xmin
-        '<x_stop type="int">',... xmax
-        '<y_start type="int">',... ymin
-        '<y_stop type="int">',... ymax
-         };
-     
-    % Read in current parameter values from xmlfile
-      target_values = read_parameterfile(SF{handles.gui_number}.xmlfile,parameters,'<');
-    % save these values into global FitPars;
-      Pfields = {'method','threshold','maxits','bkd','ppnm','initwidth',...
-          'descriptor','displacement','startFrame','endFrame','CorDrift',...
-          'dframes','dscale','Fit3D','zcutoff','zstart','zend','wx0','gx',...
-          'zrx','Ax','Bx','Cx','Dx','wy0','gy','zry','Ay','By','Cy','Dy',...
-          'xmin','xmax','ymin','ymax'};
-      FitPars = cell2struct(target_values,Pfields,2);  
-      parsfile = SF{handles.gui_number}.xmlfile;
-      
-elseif FitMethod == 3  
-    if isempty(SF{handles.gui_number}.gpufile)
-        disp('no gpu parameter file found, loading defaults');
-        SF{handles.gui_number}.gpufile = defaultGPUmFile;
-    end
-    load(SF{handles.gui_number}.gpufile);
-    parsfile = SF{handles.gui_number}.gpufile;
-    FitPars = GPUmultiPars;
-    parameters = ''; 
-end      
+                parsfile = SF{handles.gui_number}.inifile;
+
+    elseif FitMethod == 2
+        if isempty(SF{handles.gui_number}.xmlfile)
+            SF{handles.gui_number}.xmlfile = defaultXmlFile; %  ;
+            disp('no xmlfile parameter file found to load.')
+            disp(['using default file',SF{handles.gui_number}.xmlfile]);
+            disp('to load a file, drag and drop into matlab'); 
+        end
+        parameters = {
+            '<model type="string">',...    method
+            '<threshold type="float">'...  threshold
+            '<iterations type="int">',...  maxits
+            '<baseline type="float">',...   bkd
+            '<pixel_size type="float">',... ppnm
+            '<sigma type="float">',...      initwidth
+            '<descriptor type="string">',... descriptor
+            '<radius type="float">',...  displacement
+            '<start_frame type="int">',... startFrame
+            '<max_frame type="int">',... endFrame
+            '<drift_correction type="int">',... %  CorDrift
+            '<frame_step type="int">',... dframes
+            '<d_scale type="int">',...dscales
+            '<do_zfit type="int">',... Fit3D
+            '<cutoff type="float">',... zcutoff
+            '<min_z type="float">',...  zstart 
+            '<max_z type="float">',...  zend
+            '<wx_wo type="float">',...  wx0
+            '<wx_c type="float">',...  gx
+            '<wx_d type="float">',...  zrx
+            '<wxA type="float">',...  Ax
+            '<wxB type="float">',... Bx
+            '<wxC type="float">',...  Cx
+            '<wxD type="float">',...  Dx
+            '<wy_wo type="float">',...  wy0
+            '<wy_c type="float">',...  gy
+            '<wy_d type="float">',...  zry
+            '<wyA type="float">',...  Ay
+            '<wyB type="float">',...  By
+            '<wyC type="float">',...  Cy
+            '<wyD type="float">',...  Dy
+            '<x_start type="int">',... xmin
+            '<x_stop type="int">',... xmax
+            '<y_start type="int">',... ymin
+            '<y_stop type="int">',... ymax
+             };
+
+        % Read in current parameter values from xmlfile
+          target_values = read_parameterfile(SF{handles.gui_number}.xmlfile,parameters,'<');
+        % save these values into global FitPars;
+          Pfields = {'method','threshold','maxits','bkd','ppnm','initwidth',...
+              'descriptor','displacement','startFrame','endFrame','CorDrift',...
+              'dframes','dscale','Fit3D','zcutoff','zstart','zend','wx0','gx',...
+              'zrx','Ax','Bx','Cx','Dx','wy0','gy','zry','Ay','By','Cy','Dy',...
+              'xmin','xmax','ymin','ymax'};
+          FitPars = cell2struct(target_values,Pfields,2);  
+          parsfile = SF{handles.gui_number}.xmlfile;
+
+    elseif FitMethod == 3  
+        if isempty(SF{handles.gui_number}.gpufile)
+            disp('no gpu parameter file found, loading defaults');
+            SF{handles.gui_number}.gpufile = defaultGPUmFile;
+        end
+        load(SF{handles.gui_number}.gpufile);
+        parsfile = SF{handles.gui_number}.gpufile;
+        FitPars = GPUmultiPars;
+        parameters = ''; 
+    end  
+
+    % Get current ROI
+    SF{handles.gui_number}.impars.xlims = round(get(handles.axes1,'xlim'));
+    SF{handles.gui_number}.impars.ylims = round(get(handles.axes1,'ylim'));
+    FitPars = cell2struct(target_values,Pfields,2);
+    FitPars.xmin = num2str(SF{handles.gui_number}.impars.xlims(1));
+    FitPars.xmax = num2str(SF{handles.gui_number}.impars.xlims(2));
+    FitPars.ymin = num2str(SF{handles.gui_number}.impars.ylims(1));
+    FitPars.ymax = num2str(SF{handles.gui_number}.impars.ylims(2));
+        
     set(handles.CurrentPars,'String',parsfile);
 % save('C:\Users\Alistair\Documents\Projects\General_STORM\Test_data\test3.mat');
 
@@ -553,46 +565,69 @@ function FitParameters_Callback(hObject, eventdata, handles)
 % hObject    handle to FitParameters (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global SF scratchPath
-% disp('loading inifile');
-% disp(inifile);
- FitMethod = get(handles.FitMethod,'Value');
-[SF{handles.gui_number}.FitPars,parameters] = ReadParameterFile(FitMethod,handles); 
-parfile = make_temp_parameters(handles,'temp'); % if _temp.ini / .xml parameter files have not been made, make them.
-SF{handles.gui_number}.FitPars.OK = false;
+    global SF scratchPath
+    FitMethod = get(handles.FitMethod,'Value');
+    [SF{handles.gui_number}.FitPars,parameters] = ReadParameterFile(FitMethod,handles); 
+    parfile = make_temp_parameters(handles,'temp'); % if _temp.ini / .xml parameter files have not been made, make them.
+    SF{handles.gui_number}.FitPars.OK = false;
+    if FitMethod == 1 % InsightM
+        f = GUIFitParameters(handles.gui_number);
+        waitfor(f); % need to wait until parameter selection is closed. 
+        if SF{handles.gui_number}.FitPars.OK 
+            new_values = struct2cell(SF{handles.gui_number}.FitPars)';
+            modify_script(SF{handles.gui_number}.inifile,parfile,parameters,new_values,'');   
+            SF{handles.gui_number}.inifile = parfile;
+        end
+     %   disp(inifile);
+     elseif FitMethod == 2    % DaoSTORM   
+        disp(['SF instanceID = ', num2str(handles.gui_number)]);
+        f = GUIDaoParameters(handles.gui_number);
+        waitfor(f); % need to wait until parameter selection is closed.   
+        if SF{handles.gui_number}.FitPars.OK % only update parameters if user presses save button
+            new_values = struct2cell(SF{handles.gui_number}.FitPars)';
+            modify_script(SF{handles.gui_number}.xmlfile,parfile,parameters,new_values,'<');
+            SF{handles.gui_number}.xmlfile = parfile;
+        end
+     elseif FitMethod == 3
+        f = GUIgpuParameters(handles.gui_number);
+        waitfor(f);
+        if SF{handles.gui_number}.FitPars.OK
+            GPUmultiPars = SF{handles.gui_number}.FitPars; %#ok<NASGU>
+            SF{handles.gui_number}.gpufile = parfile; 
+            save(SF{handles.gui_number}.gpufile,'GPUmultiPars');
+        end
+    end
+        set(handles.CurrentPars,'String',parfile);
 
- if FitMethod == 1 % InsightM
-    f = GUIFitParameters(handles.gui_number);
-    waitfor(f); % need to wait until parameter selection is closed. 
-    if SF{handles.gui_number}.FitPars.OK 
+function UpdateFitPars(handles)
+    global SF scratchPath
+    % update FitPars with current field of view
+    SF{handles.gui_number}.impars.xlims = round(get(handles.axes1,'xlim'));
+    SF{handles.gui_number}.impars.ylims = round(get(handles.axes1,'ylim'));
+    SF{handles.gui_number}.FitPars.xmin = SF{handles.gui_number}.impars.xlims(1);
+    SF{handles.gui_number}.FitPars.xmax = SF{handles.gui_number}.impars.xlims(2);
+    SF{handles.gui_number}.FitPars.ymin = SF{handles.gui_number}.impars.xlims(1);
+    SF{handles.gui_number}.FitPars.ymax = SF{handles.gui_number}.impars.xlims(2);
+    
+    FitMethod = get(handles.FitMethod,'Value');
+    [SF{handles.gui_number}.FitPars,parameters] = ReadParameterFile(FitMethod,handles); 
+    parfile = make_temp_parameters(handles,'temp'); % if _temp.ini / .xml parameter files have not been made, make them.
+    if FitMethod == 1 % InsightM       
         new_values = struct2cell(SF{handles.gui_number}.FitPars)';
         modify_script(SF{handles.gui_number}.inifile,parfile,parameters,new_values,'');   
         SF{handles.gui_number}.inifile = parfile;
-    end
- %   disp(inifile);
- elseif FitMethod == 2    % DaoSTORM   
-     disp(['SF instanceID = ', num2str(handles.gui_number)]);
-    f = GUIDaoParameters(handles.gui_number);
-    waitfor(f); % need to wait until parameter selection is closed.   
-    if SF{handles.gui_number}.FitPars.OK % only update parameters if user presses save button
+    elseif FitMethod == 2    % DaoSTORM   
         new_values = struct2cell(SF{handles.gui_number}.FitPars)';
         modify_script(SF{handles.gui_number}.xmlfile,parfile,parameters,new_values,'<');
         SF{handles.gui_number}.xmlfile = parfile;
-    end
- elseif FitMethod == 3
-    f = GUIgpuParameters(handles.gui_number);
-    waitfor(f);
-    if SF{handles.gui_number}.FitPars.OK
+    elseif FitMethod == 3
         GPUmultiPars = SF{handles.gui_number}.FitPars; %#ok<NASGU>
         SF{handles.gui_number}.gpufile = parfile; 
         save(SF{handles.gui_number}.gpufile,'GPUmultiPars');
     end
- end
-    set(handles.CurrentPars,'String',parfile);
-% save([scratchPath 'test10.mat']);
-% load([scratchPath 'test10.mat']);
-
-
+        set(handles.CurrentPars,'String',parfile);
+    
+    
 % --- Executes on selection change in FitMethod.
 function FitMethod_Callback(hObject, eventdata, handles)
 % hObject    handle to FitMethod (see GCBO)

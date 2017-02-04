@@ -37,7 +37,7 @@ display('------------------------------------------------------------------');
 
 %% Define paths for other STORM analysis software 
 % Optionally change the default parameter files
-defaultIniFile = [matlabStormPath,'Templates\647data_pars.ini'];
+defaultIniFile = [matlabStormPath,'Defaults\647data_pars.ini'];
 defaultXmlFile = [matlabStormPath,'Templates\647_3dmufit_pars.xml'];
 
 % Set all the necessary paths for DaoSTORM to run  % 
