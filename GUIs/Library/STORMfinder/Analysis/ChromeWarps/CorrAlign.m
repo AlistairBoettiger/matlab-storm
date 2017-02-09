@@ -31,6 +31,7 @@ parameters = ParseVariableArguments(varargin, defaults, mfilename);
 
 [H,W] = size(Im1);
 
+
 if parameters.subregion && parameters.region < H
     hs = round(H/2)-parameters.region/2+1:round(H/2)+parameters.region/2;
     ws = round(W/2)-parameters.region/2+1:round(W/2)+parameters.region/2;

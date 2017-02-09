@@ -25,10 +25,10 @@ global stormAnalysisPath; % path to storm-analysis
 
 % MODIFY THESE PATHS 
 scratchPath = 'C:\Users\Alistair\Documents\ScratchPath\'; 
-pythonPath = 'C:\Python27\'; 
-matlabStormPath = 'C:\Users\Alistair\Documents\Github\matlab-storm\';  
-stormAnalysisPath= 'C:\Users\Alistair\Documents\Github\storm-analysis\';  
-insightExe = 'C:\Insight3\InsightM.exe';
+pythonPath = 'C:\Anaconda2\'; 
+matlabStormPath = 'C:\Users\Alistair\Desktop\code\matlab-storm\';  
+stormAnalysisPath= 'C:\Users\Alistair\Desktop\code\storm-analysis\';  
+insightExe = 'C:\Software\Insight3\InsightM.exe';
 
 % Call the matlab-storm startup script
 addpath([matlabStormPath,'Startup\']);
